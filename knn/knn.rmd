@@ -1,0 +1,217 @@
+---
+title: "k-nearest neighbors in R"
+author: "chad allison | 8 december 2022"
+output: github_document
+---
+
+### loading required libraries
+
+```{r message = F, warning = F}
+library(class)
+library(caret)
+library(mlbench)
+library(e1071)
+library(tidyverse)
+```
+
+### data collection
+
+```{r}
+data(Sonar)
+df = Sonar
+head(df[1:10])
+```
+
+### preparing and exploring the data
+
+```{r}
+paste0("the data has ", nrow(df), " rows and ", ncol(df), " columns")
+```
+
+### checking how many `M` and `R` classes in the data and seeing if we have `NA` values
+
+```{r}
+table(df$Class)
+colSums(is.na(df))
+```
+
+### splitting data into training and testing sets
+
+```{r}
+set.seed(123)
+df = df[sample(nrow(df)), ] # shuffling the data
+bound = floor(0.7 * nrow(df))
+df_train = df[1:bound, ]
+df_test = df[(bound + 1):nrow(df), ]
+
+paste0("the data has ", nrow(df_train), " observations in the training set and ", nrow(df_test),
+       " observations in the testing set")
+```
+
+### checking distribution of `Class` labels in training and testing data
+
+```{r}
+cat("class distribution in training data: \n", round(table(df_train$Class) / nrow(df_train), 3))
+cat("class distribution in testing data: \n", round(table(df_test$Class)/nrow(df_test), 3))
+```
+
+### creating data frames for predictors and outcomes
+
+```{r}
+x_train = subset(df_train, select = -Class)
+y_train = df_train$Class
+x_test = subset(df_test, select = -Class)
+y_test = df_test$Class
+
+head(x_train[1:5])
+y_train[1:25]
+```
+
+### training the model
+
+```{r}
+model_knn = knn(train = x_train,
+                test = x_test,
+                cl = y_train,
+                k = 3)
+
+model_knn
+```
+
+### confusion matrix of  model performance
+
+```{r}
+conf_mat = table(y_test, model_knn)
+conf_mat
+```
+
+### accuracy of model performance
+
+```{r}
+round(sum(diag(conf_mat)) / sum(conf_mat), 4)
+```
+
+### experimenting with different values of `k`
+
+```{r}
+set.seed(123)
+
+res = data.frame(i = 1:10, accuracy = NA)
+
+for (i in 1:10) {
+  mod = knn(train = x_train,
+                  test = x_test,
+                  cl = y_train,
+                  k = i)
+
+  acc = round(sum(mod == y_test) / length(y_test), 4)
+  res$accuracy[i] = acc
+}
+
+res |>
+  ggplot(aes(i, accuracy, group = 1)) +
+  geom_line(col = "springgreen4", linewidth = 1.25) +
+  geom_hline(yintercept = max(res$accuracy), linetype = "dashed") +
+  annotate("text", x = 4.25, y = 0.8, label = "best model accuracy\nwhen k = 3", size = 3.5) +
+  theme_classic() +
+  labs(x = "value of k", title = "model accuracy for different values of k") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_x_continuous(breaks = 1:10)
+```
+
+### cross validation
+
+```{r}
+knn_cv = knn.cv(train = x_train, cl = y_train, k = 3)
+knn_cv
+```
+
+### cross validation confusion matrix
+
+```{r}
+conf_mat_cv = table(y_train, knn_cv)
+conf_mat_cv
+
+paste("cross validation accuracy:", sum(diag(conf_mat_cv)) / sum(conf_mat_cv))
+```
+
+### improving the performance of the model
+
+```{r}
+set.seed(2016)
+in_train = createDataPartition(df$Class, p = 0.7, list = F)
+ndf_train = df[in_train, ]
+ndf_test = df[-in_train, ]
+
+head(ndf_train[1:10])
+```
+
+### specifying cross-validation method
+
+```{r}
+ctrl = trainControl(method = "repeatedcv", number = 5, repeats = 2)
+nn_grid = expand.grid(k = c(1, 3, 5, 7))
+nn_grid
+```
+
+### experimenting with the different `k` values
+
+```{r}
+set.seed(2016)
+
+best_knn = train(Class ~ ., data = ndf_train,
+                 method = "knn", trControl = ctrl,
+                 preProcess = c("center", "scale"),
+                 tuneGrid = nn_grid)
+
+best_knn
+```
+
+according to this, `k` = 1 has the highest model accuracy from repeated cross-validation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
