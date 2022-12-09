@@ -1,0 +1,123 @@
+---
+title: "decision trees in R"
+author: "chad allison | 9 december 2022"
+output: github_document
+---
+
+### loading libraries
+
+```{r message = F, warning = F}
+library(tidyverse)
+library(rpart)
+library(rpart.plot)
+```
+
+### loading the data
+
+```{r message = F, warning = F}
+# download.file("https://ibm.box.com/shared/static/dpdh09s70abyiwxguehqvcq3dn0m7wve.data", "mushroom.data")
+df = read.csv("mushroom.data", header = F)
+head(df[1:8])
+```
+
+### defining column names
+
+```{r}
+colnames(df) = c("Class", "cap.shape", "cap.surface", "cap.color", "bruises", "odor",
+                 "gill.attachment", "gill.spacing", "gill.size", "gill.color", "stalk.shape",
+                 "stalk.root", "stalk.surface.above.ring", "stalk.surface.below.ring",
+                 "stalk.color.above.ring", "stalk.color.below.ring", "veil.type", "veil.color",
+                 "ring.number","ring.type","print","population","habitat")
+
+head(df[1:8])
+```
+
+### defining factor levels for `Class`, `odor`, and `print`
+
+```{r}
+levels(df$Class) = c("Edible", "Poisonous")
+levels(df$odor) = c("Almonds", "Anise", "Creosote", "Fishy", "Foul", "Musty", "None", "Pungent", "Spicy")
+levels(df$print) = c("Black", "Brown", "Buff", "Chocolate", "Green", "Orange", "Purple", "White", "Yellow")
+head(df[1:8])
+```
+
+### creating the decision tree
+
+```{r}
+decision_tree = rpart(Class ~ ., data = df, method = "class")
+print(decision_tree)
+```
+
+### visualising the decision tree
+
+```{r}
+rpart.plot(decision_tree, type = 3, extra = 2, under = T, faclen = 5, cex = 0.75)
+```
+
+### making a prediction
+
+```{r}
+newCase = df[10, -1]
+predict(decision_tree, newCase, type = "class") # correct prediction
+```
+
+### how accurate is the model? splitting the data
+
+```{r}
+n = nrow(df)
+sample_size = floor(0.75 * n)
+set.seed(123)
+train_ind = sample(c(1:n), size = sample_size)
+df_train = df[train_ind, ]
+df_test = df[-train_ind, ]
+
+head(df_train[1:8])
+```
+
+### training a new decision tree
+
+```{r}
+new_tree = rpart(Class ~ ., data = df_train, method = "class")
+result = predict(new_tree, df_test[, -1], type = "class")
+conf_mat = table(df_test$Class, result)
+conf_mat
+
+acc = round(sum(diag(conf_mat)) / sum(conf_mat), 4)
+paste("model accuracy:", acc)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
