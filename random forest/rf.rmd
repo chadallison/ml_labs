@@ -1,0 +1,51 @@
+---
+title: "random forest"
+author: "chad allison | 20 january 2023"
+output: github_document
+---
+
+### setup
+
+```{r message = F, warning = F}
+library(randomForest)
+```
+
+### creating model
+
+```{r}
+little_forest = randomForest(Species ~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width,
+                             data = iris)
+
+print(little_forest)
+```
+
+### variable importance
+
+```{r}
+importance(little_forest, type = 2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
