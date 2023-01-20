@@ -1,0 +1,88 @@
+---
+title: "random forest exercise"
+author: "chad allison | 20 january 2023"
+output: github_document
+---
+
+### setup
+
+```{r message = F, warning = F}
+library(randomForest)
+```
+
+### importing data
+
+```{r}
+df1 = read.csv("https://ibm.box.com/shared/static/fzceg5vdj9hxpf7aopgvfgobi1g4vb4v.csv")
+head(df1)
+```
+
+### plotting data
+
+```{r}
+plot(df1$sldprice)
+```
+
+### removing NA values
+
+```{r}
+df2 = na.omit(df1)
+head(df2)
+```
+
+### creating model
+
+```{r}
+fit1 = randomForest(sldprice ~ ., data = df2, importance = T)
+print(fit1)
+```
+
+### variable importance
+
+```{r}
+round(importance(fit1, type = 1), 2)
+```
+
+### re-fitting the model
+
+```{r}
+fit2 = randomForest(sldprice ~ ., data = df2, proximity = T, importance = T, action = na.omit)
+print(fit2)
+```
+
+### new model variable importance
+
+```{r}
+round(importance(fit2, type = 1), 2)
+```
+
+### plotting models
+
+```{r}
+par(mfrow = c(1, 2))
+plot(fit1)
+plot(fit2)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
