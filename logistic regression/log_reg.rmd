@@ -1,0 +1,315 @@
+---
+title: "linear regression"
+author: "chad allison"
+date: '2023-01-23'
+output: github_document
+---
+
+### setup
+
+```{r message = F, warning = F}
+library(tidyverse)
+library(class)
+library(VGAM)
+library(gridExtra)
+theme_set(theme_minimal())
+options(scipen = 999)
+```
+
+### data import
+
+```{r message = F, warning = F}
+df = read_csv("loan_data.csv", col_types = cols())
+head(df)
+```
+
+### visualizing `loan_status` observations
+
+```{r}
+df |>
+  count(loan_status) |>
+  ggplot(aes(loan_status, n)) +
+  geom_col(aes(fill = loan_status), alpha = 0.75) +
+  geom_text(aes(label = n), vjust = -0.5) +
+  scale_fill_manual(values = c("#DC7777", "#76A877")) +
+  labs(x = "loan status", y = "count",
+       title = "counts of loan statuses") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = "none")
+```
+
+### visualizing `Principal`
+
+```{r}
+df |>
+  ggplot(aes(Principal)) +
+  geom_histogram(aes(fill = loan_status, y = 0.5 * ..density..),
+                 binwidth = 120, alpha = 0.5, position = "identity") +
+  scale_fill_manual(values = c("indianred3", "springgreen4"))
+  labs(x = "principal", y = "density", fill = "loan status",
+       title = "histogram of principal by loan status") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### visualizing `terms`
+
+```{r warning = F}
+df |>
+  ggplot(aes(terms)) +
+  geom_histogram(aes(fill = loan_status, y = 1 * ..density..),
+                 binwidth = 10, alpha = 0.5, position = "identity") +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  scale_x_continuous(limits = c(0, 40)) +
+  labs(x = "terms", y = "density", fill = "loan status",
+       title = "plot of loan status by terms") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### visualizing `age`
+
+```{r}
+df |>
+  ggplot(aes(age)) +
+  geom_histogram(aes(fill = loan_status, y = 1 * ..density..),
+                 binwidth = 1, alpha = 0.5, position = "identity") +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  labs(y = "density", fill = "loan status",
+       title = "relationship between age and loan status") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### visualizing multiple variables
+
+```{r warning = F}
+hist_top = df |>
+  ggplot(aes(Principal)) +
+  geom_histogram(aes(fill = loan_status, y = 1 * ..density..),
+                  binwidth = 100, alpha = 0.5, position = "identity") +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  scale_x_continuous(limits = c(200, 1100)) +
+  labs(x = "principal", y = "density") +
+  theme(legend.position = "none")
+
+empty = ggplot() +
+  geom_point(aes(1, 1), col = "white") +
+  theme(axis.ticks = element_blank(), 
+        panel.background = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank())
+
+scatter = df |>
+  ggplot(aes(Principal, age)) +
+  geom_point(aes(col = loan_status, fill = loan_status)) +
+  scale_color_manual(values = c("indianred3", "springgreen4")) +
+  theme(legend.position = "top") +
+  labs(x = "principal", y = "age")
+
+hist_right = df |>
+  ggplot(aes(age)) +
+  geom_histogram(aes(fill = loan_status, y = 0.5 * ..density..),
+                 binwidth = 1, alpha = 0.5, position = "identity") +
+  scale_x_continuous(limits = c(20, 45)) +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(x = "age", y = "density")
+
+
+grid.arrange(hist_top, empty, scatter, hist_right,
+             ncol = 2, nrow = 2, widths = c(4, 1), heights = c(1, 4))
+```
+
+### visualizing the day of week
+
+```{r warning = F}
+df |>
+  ggplot(aes(dayofweek)) +
+  geom_histogram(aes(fill = loan_status, y = 1 * ..density..),
+                 binwidth = 1, alpha = 0.5, position = "identity") +
+  scale_x_continuous(limits = c(0, 7)) +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  labs(x = "day of week", y = "density", fill = "loan status",
+       title = "loan status by day of week") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### converting days of week to categorical variable
+
+```{r}
+namevector = c("Weekend")
+df[, namevector] = 0
+df$Weekend[df$dayofweek > 3] = 1
+head(select(df, dayofweek, Weekend))
+```
+
+### encoding `Gender`
+
+```{r}
+namevector = c("Gender01")
+df[, namevector] = 0
+df$Gender01[df$Gender == "male"] = 1
+head(select(df, Gender, Gender01))
+```
+
+### table of gender and loan status
+
+```{r}
+table(df$Gender01, df$loan_status)
+```
+
+### visualizing relationship between gender and loan status
+
+```{r warning = F}
+df |>
+  ggplot(aes(Gender01)) +
+  geom_histogram(aes(fill = loan_status, y = 1 * ..density..),
+                 binwidth = 1, alpha = 0.5, position = "identity") +
+  scale_x_continuous(limits = c(0, 2)) +
+  scale_fill_manual(values = c("indianred3", "springgreen4")) +
+  labs(x = "gender", y = "density", fill = "loan status",
+       title = "loan status by gender") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### one hot encoding education
+
+```{r}
+df = df |>
+  mutate(educationBechalor = ifelse(education == "Bechalor", 1, 0),
+         educationcollege = ifelse(education == "college", 1, 0),
+         `educationHigh School or Below` = ifelse(education == "High School or Below", 1, 0),
+         `educationMaster or Above` = ifelse(education == "Master or Above", 1, 0))
+
+df |>
+  select(14:17) |>
+  head()
+```
+
+### getting data in data frame
+
+```{r}
+Columns = c("Principal", "terms", "age", "educationBechalor", "educationcollege",
+            "educationHigh School or Below", "educationMaster or Above", "Weekend", "Gender01")
+
+Data = df[Columns]
+head(Data)
+```
+
+### adding labels
+
+```{r}
+NewColumn = c("Class")
+Data[, NewColumn] = 0
+Data$Class[df$loan_status == "PAIDOFF"] = 1
+sample_n(select(Data, Class), 10)
+```
+
+### normalize data
+
+```{r}
+Data[Columns] = scale(Data[Columns])
+head(Data[Columns])
+```
+
+### train test split
+
+```{r}
+set.seed(123)
+testindex = sample.int(nrow(Data))[1:floor(0.1 * nrow(Data))]
+TestData = Data[testindex, ]
+TrainData = Data[-testindex, ]
+paste0(nrow(TrainData), " observations in training data; ",
+       nrow(TestData), " observations in testing data")
+```
+
+### building model
+
+```{r}
+model = glm(Class ~ ., family = binomial(link = "logit"), data = TrainData, control = list(maxit = 50))
+summary(model)
+```
+
+### making predictions
+
+```{r warning = F}
+fitted.results = predict(model, newdata = TestData, type = "response")
+yhat = ifelse(fitted.results > 0.5, 1, 0)
+yhat[1:5]
+```
+
+### getting labels
+
+```{r}
+y = TestData[, c("Class")]
+y[1:4, ]
+```
+
+### getting accuracy
+
+```{r}
+mean(yhat == y)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
